@@ -52,7 +52,7 @@ PCStoreWithOdometry::PCStoreWithOdometry()
 	viewer.addCoordinateSystem(0.5, "axis");
 
 	nhPrivate.param("mode_limit_store", mode_limit_store, true);
-	nhPrivate.param("limited_num_scans", limited_num_scans, 100);
+	nhPrivate.param("limited_num_scans", limited_num_scans, 20);
 }
 
 void PCStoreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &msg)

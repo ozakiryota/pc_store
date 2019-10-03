@@ -17,8 +17,5 @@
 	<!-- main -->
 	<node pkg="pc_store" name="downsampled_pc_srore_with_odometry_mapframe" type="downsampled_pc_srore_with_odometry_mapframe" output="screen">
 		<remap from="/odom" to="/tinypower/odom/republished"/>
-		<!-- optional -->
-		<!-- <param name="mode_limit_store" type="bool" value="false"/> -->
-		<!-- <param name="limited_num_scans" type="int" value="25"/> -->
 	</node>
 </launch>

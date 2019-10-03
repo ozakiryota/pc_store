@@ -7,7 +7,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
-#include <pcl/filters/voxel_grid.h>
+/* #include <pcl/filters/voxel_grid.h> */
+#include <pcl/filters/approximate_voxel_grid.h>
 
 class PCStoreWithOdometry{
 	private:
@@ -30,16 +31,11 @@ class PCStoreWithOdometry{
 		/*flags*/
 		bool first_callback_odom = true;
 		bool pc_was_added = false;
-		/*limit storing*/
-		bool mode_limit_store = true;
-		int limited_num_scans = 20;
-		std::vector<size_t> list_num_scanpoints;
-
 	public:
 		PCStoreWithOdometry();
 		void CallbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
 		void CallbackOdom(const nav_msgs::OdometryConstPtr& msg);
-		void Downsampling(void);
+		void Downsampling(pcl::PointCloud<pcl::PointXYZI>::Ptr pc);
 		void Visualization(void);
 		void Publication(void);
 };
@@ -52,15 +48,11 @@ PCStoreWithOdometry::PCStoreWithOdometry()
 	pub = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points/stored", 1);
 	viewer.setBackgroundColor(1, 1, 1);
 	viewer.addCoordinateSystem(0.5, "axis");
-
-	nhPrivate.param("mode_limit_store", mode_limit_store, true);
-	nhPrivate.param("limited_num_scans", limited_num_scans, 20);
 }
 
 void PCStoreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
 	// std::cout << "CALLBACK PC" << std::endl;
-	if(pc_was_added)	cloud_now->points.clear();
 	pcl::fromROSMsg(*msg, *cloud_now);
 	cloud_stored->header.frame_id = msg->header.frame_id;
 	pc_was_added = false;
@@ -72,6 +64,7 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 	odom_now = *msg;
 	if(first_callback_odom)	odom_last = odom_now;
 	else if(!pc_was_added){
+		/*compute offset and rotation*/
 		tf::Quaternion pose_now;
 		tf::Quaternion pose_last;
 		quaternionMsgToTF(odom_now.pose.pose.orientation, pose_now);
@@ -87,27 +80,14 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 		);
 		tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
 		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
+		/*downsampling*/
+		Downsampling(cloud_stored);
+		/*transform*/
 		pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
 		*cloud_stored  += *cloud_now;
 		pc_was_added = true;
 		
-		Downsampling();
-		
 		odom_last = odom_now;
-		
-		/* #<{(|limit storing|)}># */
-		/* if(mode_limit_store){ */
-		/* 	list_num_scanpoints.push_back(cloud_now->points.size()); */
-		/* 	if(list_num_scanpoints.size()>limited_num_scans){ */
-		/* 		cloud_stored->points.erase(cloud_stored->points.begin(), cloud_stored->points.begin() + list_num_scanpoints[0]); */
-		/* 		list_num_scanpoints.erase(list_num_scanpoints.begin()); */
-		/* 	} */
-		/* 	cloud_stored->width = cloud_stored->points.size(); */
-		/* 	cloud_stored->height = 1; */
-        /*  */
-		/* 	std::cout << "limit storing: true" << std::endl; */
-		/* 	std::cout << "number of stored scans: " << list_num_scanpoints.size() << std::endl; */
-		/* } */
 	}
 	first_callback_odom = false;
 
@@ -115,12 +95,17 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 	Publication();
 }
 
-void PCStoreWithOdometry::Downsampling(void)
+void PCStoreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)
 {
-	pcl::VoxelGrid<pcl::PointXYZI> vg;
-	vg.setInputCloud(cloud_stored);
-	vg.setLeafSize(0.01f, 0.01f, 0.01f);
-	vg.filter(*cloud_stored);
+	pcl::ApproximateVoxelGrid<pcl::PointXYZI> avg;
+	avg.setInputCloud(pc);
+	avg.setLeafSize(0.3f, 0.3f, 0.3f);
+	avg.filter(*pc);
+
+	/* pcl::VoxelGrid<pcl::PointXYZI> vg; */
+	/* vg.setInputCloud(pc); */
+	/* vg.setLeafSize(0.5f, 0.5f, 0.5f); */
+	/* vg.filter(*pc); */
 }
 
 void PCStoreWithOdometry::Visualization(void)

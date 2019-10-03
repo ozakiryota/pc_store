@@ -194,3 +194,5 @@ include_directories(
 # catkin_add_nosetests(test)
 add_executable(pc_srore_with_odometry src/pc_srore_with_odometry.cpp)
 target_link_libraries(pc_srore_with_odometry ${catkin_LIBRARIES})
+add_executable(downsampled_pc_srore_with_odometry src/downsampled_pc_srore_with_odometry.cpp)
+target_link_libraries(downsampled_pc_srore_with_odometry ${catkin_LIBRARIES})

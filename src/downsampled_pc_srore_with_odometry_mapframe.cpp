@@ -29,6 +29,8 @@ class PCStoreWithOdometry{
 		/*pub info*/
 		std::string frame_id_pub;
 		ros::Time time_pub;
+		/*parameters*/
+		double leaf_size;
 	public:
 		PCStoreWithOdometry();
 		void CallbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
@@ -46,6 +48,9 @@ PCStoreWithOdometry::PCStoreWithOdometry()
 	pub = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points/stored", 1);
 	viewer.setBackgroundColor(1, 1, 1);
 	viewer.addCoordinateSystem(0.5, "axis");
+
+	nhPrivate.param("leaf_size", leaf_size, 0.5);
+	std::cout << "leaf_size = " << leaf_size << std::endl;
 }
 
 void PCStoreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &msg)
@@ -64,7 +69,7 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 	time_pub = msg->header.stamp;
 	if(!pc_was_added){
 		/*downsampling*/
-		Downsampling(cloud_stored);
+		Downsampling(cloud_now);
 		/*transform*/
 		Eigen::Vector3f offset(
 			msg->pose.pose.position.x,
@@ -90,7 +95,7 @@ void PCStoreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)
 {
 	pcl::ApproximateVoxelGrid<pcl::PointXYZI> avg;
 	avg.setInputCloud(pc);
-	avg.setLeafSize(0.5f, 0.5f, 0.5f);
+	avg.setLeafSize((float)leaf_size, (float)leaf_size, (float)leaf_size);
 	avg.filter(*pc);
 }
 

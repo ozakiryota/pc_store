@@ -104,11 +104,10 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 			std::cout << "limit storing: true" << std::endl;
 			std::cout << "number of stored scans: " << list_num_scanpoints.size() << std::endl;
 		}
+		Visualization();
+		Publication();
 	}
 	first_callback_odom = false;
-
-	Visualization();
-	Publication();
 }
 
 void PCStoreWithOdometry::Visualization(void)

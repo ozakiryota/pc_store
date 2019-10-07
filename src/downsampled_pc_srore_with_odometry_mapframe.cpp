@@ -86,9 +86,10 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 
 		*cloud_stored  += *cloud_now;
 		pc_was_added = true;
+
+		Visualization();
+		Publication();
 	}
-	Visualization();
-	Publication();
 }
 
 void PCStoreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)

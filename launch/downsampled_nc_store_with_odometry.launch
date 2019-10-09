@@ -15,7 +15,11 @@
 	<node pkg="pose_estimation_walls" name="odom_republish_infant" type="odom_republish_infant"/>
 
 	<!-- normal -->
-	<node pkg="normal_estimation_pcl" name="normal_estimation_pcl_omp" type="normal_estimation_pcl_omp" output="screen"/>
+	<!-- <node pkg="normal_estimation_pcl" name="normal_estimation_pcl_omp" type="normal_estimation_pcl_omp" output="screen"/> -->
+	<node pkg="normal_estimation_pcl" name="omp_flexible_search_range" type="omp_flexible_search_range" output="screen">
+		<param name="skip" type="int" value="3"/>
+		<param name="search_radius_ratio" type="double" value="0.09"/>
+	</node>
 
 	<!-- main -->
 	<node pkg="pc_store" name="downsampled_nc_srore_with_odometry" type="downsampled_nc_srore_with_odometry" output="screen">

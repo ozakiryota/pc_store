@@ -111,6 +111,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 
 		Visualization();
 		if(!cloud_stored->points.empty())	Publication();
+		/* for(size_t i=0;i<cloud_stored->points.size();++i)   std::cout << "cloud_stored->points[i].data_n[3] = " << cloud_stored->points[i].data_n[3] << std::endl; */
 	}
 	first_callback_odom = false;
 

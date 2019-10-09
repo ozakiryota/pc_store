@@ -69,6 +69,7 @@ void DownsampledNCSroreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2Co
 {
 	// std::cout << "CALLBACK PC" << std::endl;
 	pcl::fromROSMsg(*msg, *cloud_now);
+	std::cout << "cloud_now->points[0].data_n[3] = " << cloud_now->points[0].data_n[3] << std::endl;
 	cloud_stored->header.frame_id = msg->header.frame_id;
 	pc_was_added = false;
 }
@@ -79,6 +80,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 	odom_now = *msg;
 	if(first_callback_odom)	odom_last = odom_now;
 	else if(!pc_was_added){
+		if(!cloud_stored->points.empty())	std::cout << "1: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		/*compute offset and rotation*/
 		tf::Quaternion pose_now;
 		tf::Quaternion pose_last;
@@ -97,7 +99,9 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
 		/*transform*/
 		pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+		if(!cloud_stored->points.empty())	std::cout << "2: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		*cloud_stored  += *cloud_now;
+		if(!cloud_stored->points.empty())	std::cout << "0: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		pc_was_added = true;
 		
 		odom_last = odom_now;
@@ -108,10 +112,22 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		}
 		/*downsampling*/
 		Downsampling(cloud_stored);
+		if(!cloud_stored->points.empty())	std::cout << "3: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
+		/*depth*/
+		for(size_t i=0;i<cloud_stored->points.size();++i){
+			cloud_stored->points[i].data_n[3] = 
+				(cloud_stored->points[i].x*cloud_stored->points[i].normal_x
+				+ cloud_stored->points[i].y*cloud_stored->points[i].normal_y 
+				+ cloud_stored->points[i].z*cloud_stored->points[i].normal_z)
+				/(cloud_stored->points[i].normal_x*cloud_stored->points[i].normal_x 
+				+ cloud_stored->points[i].normal_y*cloud_stored->points[i].normal_y
+				+ cloud_stored->points[i].normal_z*cloud_stored->points[i].normal_z);
+		}
 
 		Visualization();
 		if(!cloud_stored->points.empty())	Publication();
 		/* for(size_t i=0;i<cloud_stored->points.size();++i)   std::cout << "cloud_stored->points[i].data_n[3] = " << cloud_stored->points[i].data_n[3] << std::endl; */
+		if(!cloud_stored->points.empty())	std::cout << "4: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 	}
 	first_callback_odom = false;
 

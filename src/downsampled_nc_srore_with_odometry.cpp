@@ -80,7 +80,6 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 	odom_now = *msg;
 	if(first_callback_odom)	odom_last = odom_now;
 	else if(!pc_was_added){
-		if(!cloud_stored->points.empty())	std::cout << "1: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		/*compute offset and rotation*/
 		tf::Quaternion pose_now;
 		tf::Quaternion pose_last;
@@ -99,9 +98,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
 		/*transform*/
 		pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
-		if(!cloud_stored->points.empty())	std::cout << "2: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		*cloud_stored  += *cloud_now;
-		if(!cloud_stored->points.empty())	std::cout << "0: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		pc_was_added = true;
 		
 		odom_last = odom_now;
@@ -112,7 +109,6 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		}
 		/*downsampling*/
 		Downsampling(cloud_stored);
-		if(!cloud_stored->points.empty())	std::cout << "3: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 		/*depth*/
 		for(size_t i=0;i<cloud_stored->points.size();++i){
 			cloud_stored->points[i].data_n[3] = 
@@ -126,8 +122,6 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 
 		Visualization();
 		if(!cloud_stored->points.empty())	Publication();
-		/* for(size_t i=0;i<cloud_stored->points.size();++i)   std::cout << "cloud_stored->points[i].data_n[3] = " << cloud_stored->points[i].data_n[3] << std::endl; */
-		if(!cloud_stored->points.empty())	std::cout << "4: cloud_stored->points[0].data_n[3] = " << cloud_stored->points[0].data_n[3] << std::endl;
 	}
 	first_callback_odom = false;
 

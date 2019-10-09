@@ -110,7 +110,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		Downsampling(cloud_stored);
 
 		Visualization();
-		Publication();
+		if(!cloud_stored->points.empty())	Publication();
 	}
 	first_callback_odom = false;
 

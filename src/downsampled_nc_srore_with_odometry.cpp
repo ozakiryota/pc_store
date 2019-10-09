@@ -78,7 +78,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 	// std::cout << "CALLBACK ODOM" << std::endl;
 	odom_now = *msg;
 	if(first_callback_odom)	odom_last = odom_now;
-	else if(!cloud_stored->points.empty())	*cloud_stored = *cloud_now;
+	else if(cloud_stored->points.empty())	*cloud_stored = *cloud_now;
 	else if(!pc_was_added){
 		/*compute offset and rotation*/
 		tf::Quaternion pose_now;

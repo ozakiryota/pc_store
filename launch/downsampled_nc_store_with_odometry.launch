@@ -1,0 +1,27 @@
+<launch>
+	<!-- global rosparam -->
+	<param name="use_sim_time" value="true"/>
+
+	<!-- rosbag -->
+	<node pkg="rosbag" type="play" name="player" args="--clock /home/amsl/ozaki/bagfiles/infant/indoor_dkan/2019-04-04-14-27-47.bag"/>
+	
+	<!-- rviz -->
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find pc_store)rviz_config/nc_store.rviz"/>
+
+	<!-- sensor driver -->
+	<include file="$(find velodyne_pointcloud)/launch/32e_points.launch"/>
+
+	<!-- infant -->
+	<node pkg="pose_estimation_walls" name="odom_republish_infant" type="odom_republish_infant"/>
+
+	<!-- normal -->
+	<node pkg="normal_estimation_pcl" name="normal_estimation_pcl_omp" type="normal_estimation_pcl_omp" output="screen"/>
+
+	<!-- main -->
+	<node pkg="pc_store" name="downsampled_nc_srore_with_odometry" type="downsampled_nc_srore_with_odometry" output="screen">
+		<remap from="/odom" to="/tinypower/odom/republished"/>
+		<!-- <param name="mode_limit_store" type="bool" value="false"/> -->
+		<param name="pc_range" type="double" value="10.0"/>
+		<param name="leaf_size" type="double" value="0.2"/>
+	</node>
+</launch>

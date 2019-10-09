@@ -201,6 +201,9 @@ target_link_libraries(nc_srore_with_odometry ${catkin_LIBRARIES})
 add_executable(downsampled_pc_srore_with_odometry src/downsampled_pc_srore_with_odometry.cpp)
 target_link_libraries(downsampled_pc_srore_with_odometry ${catkin_LIBRARIES})
 #
+add_executable(downsampled_nc_srore_with_odometry src/downsampled_nc_srore_with_odometry.cpp)
+target_link_libraries(downsampled_nc_srore_with_odometry ${catkin_LIBRARIES})
+#
 add_executable(downsampled_pc_srore_with_odometry_mapframe src/downsampled_pc_srore_with_odometry_mapframe.cpp)
 target_link_libraries(downsampled_pc_srore_with_odometry_mapframe ${catkin_LIBRARIES})
 #

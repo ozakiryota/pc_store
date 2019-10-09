@@ -43,7 +43,7 @@ class DownsampledNCSroreWithOdometry{
 		void CallbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
 		void CallbackOdom(const nav_msgs::OdometryConstPtr& msg);
 		void Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc);
-		void PassThrough(pcl::PointCloud<pcl::PointNormal>::Ptr pc_in, pcl::PointCloud<pcl::PointNormal>::Ptr pc_out, std::vector<double> range);
+		void PassThrough(pcl::PointCloud<pcl::PointNormal>::Ptr pc_in, std::vector<double> range);
 		void Visualization(void);
 		void Publication(void);
 };
@@ -104,7 +104,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 
 		/*limit storing*/
 		if(mode_limit_store){
-			PassThrough(cloud_stored, cloud_stored, std::vector<double> {-pc_range, pc_range, -pc_range, pc_range});
+			PassThrough(cloud_stored, std::vector<double> {-pc_range, pc_range, -pc_range, pc_range});
 		}
 		/*downsampling*/
 		Downsampling(cloud_stored);
@@ -129,17 +129,17 @@ void DownsampledNCSroreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNorm
 	/* vg.filter(*pc); */
 }
 
-void DownsampledNCSroreWithOdometry::PassThrough(pcl::PointCloud<pcl::PointNormal>::Ptr pc_in, pcl::PointCloud<pcl::PointNormal>::Ptr pc_out, std::vector<double> range)
+void DownsampledNCSroreWithOdometry::PassThrough(pcl::PointCloud<pcl::PointNormal>::Ptr pc, std::vector<double> range)
 {
 	pcl::PassThrough<pcl::PointNormal> pass;
-	pass.setInputCloud(pc_in);
+	pass.setInputCloud(pc);
 	pass.setFilterFieldName("x");
 	pass.setFilterLimits(range[0], range[1]);
-	pass.filter(*pc_out);
-	pass.setInputCloud(pc_out);
+	pass.filter(*pc);
+	pass.setInputCloud(pc);
 	pass.setFilterFieldName("y");
 	pass.setFilterLimits(range[2], range[3]);
-	pass.filter(*pc_out);
+	pass.filter(*pc);
 }
 
 void DownsampledNCSroreWithOdometry::Visualization(void)

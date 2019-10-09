@@ -69,7 +69,6 @@ void DownsampledNCSroreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2Co
 {
 	// std::cout << "CALLBACK PC" << std::endl;
 	pcl::fromROSMsg(*msg, *cloud_now);
-	std::cout << "cloud_now->points[0].data_n[3] = " << cloud_now->points[0].data_n[3] << std::endl;
 	cloud_stored->header.frame_id = msg->header.frame_id;
 	pc_was_added = false;
 }

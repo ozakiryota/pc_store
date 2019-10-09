@@ -95,8 +95,6 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		);
 		tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
 		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
-		/*downsampling*/
-		Downsampling(cloud_stored);
 		/*transform*/
 		pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
 		*cloud_stored  += *cloud_now;
@@ -108,6 +106,8 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		if(mode_limit_store){
 			PassThrough(cloud_stored, cloud_stored, std::vector<double> {-pc_range, pc_range, -pc_range, pc_range});
 		}
+		/*downsampling*/
+		Downsampling(cloud_stored);
 	}
 	first_callback_odom = false;
 

@@ -108,11 +108,12 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		}
 		/*downsampling*/
 		Downsampling(cloud_stored);
+
+		Visualization();
+		Publication();
 	}
 	first_callback_odom = false;
 
-	Visualization();
-	Publication();
 }
 
 void DownsampledNCSroreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc)

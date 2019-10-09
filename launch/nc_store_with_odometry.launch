@@ -20,7 +20,6 @@
 	<!-- main -->
 	<node pkg="pc_store" name="nc_srore_with_odometry" type="nc_srore_with_odometry" output="screen">
 		<remap from="/odom" to="/tinypower/odom/republished"/>
-		<param name="leaf_size" type="double" value="0.5"/>
 		<!-- <param name="mode_limit_store" type="bool" value="false"/> -->
 		<!-- <param name="limited_num_scans" type="int" value="10"/> -->
 	</node>

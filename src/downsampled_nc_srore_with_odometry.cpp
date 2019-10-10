@@ -102,9 +102,15 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 			);
 			tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
 			Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
-			/*transform*/
-			pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
-			*cloud_stored  += *cloud_now;
+			/*judge moving or still*/
+			const double epsilon = 1.0e-5;
+			double r, p, y;
+			tf::Matrix3x3(relative_rotation).getRPY(r, p, y);
+			if(offset.norm()>epsilon || r>epsilon || p>epsilon || y>epsilon){
+				/*transform*/
+				pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+				*cloud_stored  += *cloud_now;
+			}
 		}
 		/*limit storing*/
 		if(mode_limit_store)	PassThroughFiltter(cloud_stored, std::vector<double>{-pc_range, pc_range, -pc_range, pc_range});

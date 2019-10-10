@@ -127,6 +127,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 		if(!cloud_stored->points.empty())	Publication();
 	}
 	first_callback_odom = false;
+	std::cout << "test" << std::endl;
 }
 
 void DownsampledNCSroreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc)

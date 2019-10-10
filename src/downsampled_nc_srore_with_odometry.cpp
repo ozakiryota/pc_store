@@ -124,13 +124,11 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 					+ cloud_stored->points[i].normal_y*cloud_stored->points[i].normal_y
 					+ cloud_stored->points[i].normal_z*cloud_stored->points[i].normal_z);
 			}
-
 		}
 	}
 	Visualization();
 	if(!cloud_stored->points.empty())	Publication();
 	first_callback_odom = false;
-
 }
 
 void DownsampledNCSroreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc)

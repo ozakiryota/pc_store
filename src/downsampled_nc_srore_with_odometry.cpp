@@ -38,6 +38,7 @@ class DownsampledNCSroreWithOdometry{
 		bool mode_limit_store;
 		double pc_range;
 		double leaf_size;
+		bool mode_open_viewer;
 	public:
 		DownsampledNCSroreWithOdometry();
 		void CallbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
@@ -60,9 +61,13 @@ DownsampledNCSroreWithOdometry::DownsampledNCSroreWithOdometry()
 	nhPrivate.param("mode_limit_store", mode_limit_store, true);
 	nhPrivate.param("pc_range", pc_range, 10.0);
 	nhPrivate.param("leaf_size", leaf_size, 0.2);
+	nhPrivate.param("mode_open_viewer", mode_open_viewer, true);
 	std::cout << "mode_limit_store = " << mode_limit_store << std::endl;
 	std::cout << "pc_range = " << pc_range << std::endl;
 	std::cout << "leaf_size = " << leaf_size << std::endl;
+	std::cout << "mode_open_viewer = " << (bool)mode_open_viewer << std::endl;
+
+	if(!mode_open_viewer)	viewer.close();
 }
 
 void DownsampledNCSroreWithOdometry::CallbackPC(const sensor_msgs::PointCloud2ConstPtr &msg)
@@ -126,7 +131,7 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 			}
 		}
 	}
-	Visualization();
+	if(mode_open_viewer)	Visualization();
 	if(!cloud_stored->points.empty())	Publication();
 	first_callback_odom = false;
 }

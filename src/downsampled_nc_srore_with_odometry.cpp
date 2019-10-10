@@ -85,57 +85,47 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 	if(first_callback_odom)	odom_last = odom_now;
 	else if(!pc_was_added){
 		if(cloud_stored->points.empty())	*cloud_stored = *cloud_now;
-	}
-	else if(cloud_stored->points.empty())	*cloud_stored = *cloud_now;
-	else if(!pc_was_added){
-		/*compute offset and rotation*/
-		tf::Quaternion pose_now;
-		tf::Quaternion pose_last;
-		quaternionMsgToTF(odom_now.pose.pose.orientation, pose_now);
-		quaternionMsgToTF(odom_last.pose.pose.orientation, pose_last);
-		tf::Quaternion relative_rotation = pose_last*pose_now.inverse();
-		relative_rotation.normalize();	
-		Eigen::Quaternionf rotation(relative_rotation.w(), relative_rotation.x(), relative_rotation.y(), relative_rotation.z());
-		tf::Quaternion q_global_move(
-			odom_last.pose.pose.position.x - odom_now.pose.pose.position.x,
-			odom_last.pose.pose.position.y - odom_now.pose.pose.position.y,
-			odom_last.pose.pose.position.z - odom_now.pose.pose.position.z,
-			0.0
-		);
-		tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
-		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
-		/*check moving or still*/
-		const double epsilon = 1.0e-5;
-		double r, p, y;
-		tf::Matrix3x3(relative_rotation).getRPY(r, p, y);
-		if(offset.norm()>epsilon || fabs(r)>epsilon || fabs(p)>epsilon || fabs(y)>epsilon){
+		else{
+			/*compute offset and rotation*/
+			tf::Quaternion pose_now;
+			tf::Quaternion pose_last;
+			quaternionMsgToTF(odom_now.pose.pose.orientation, pose_now);
+			quaternionMsgToTF(odom_last.pose.pose.orientation, pose_last);
+			tf::Quaternion relative_rotation = pose_last*pose_now.inverse();
+			relative_rotation.normalize();	
+			Eigen::Quaternionf rotation(relative_rotation.w(), relative_rotation.x(), relative_rotation.y(), relative_rotation.z());
+			tf::Quaternion q_global_move(
+				odom_last.pose.pose.position.x - odom_now.pose.pose.position.x,
+				odom_last.pose.pose.position.y - odom_now.pose.pose.position.y,
+				odom_last.pose.pose.position.z - odom_now.pose.pose.position.z,
+				0.0
+			);
+			tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
+			Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
 			/*transform*/
 			pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
 			*cloud_stored  += *cloud_now;
-			pc_was_added = true;
-			
-			odom_last = odom_now;
-
-			/*limit storing*/
-			if(mode_limit_store){
-				PassThroughFiltter(cloud_stored, std::vector<double> {-pc_range, pc_range, -pc_range, pc_range});
-			}
-			/*downsampling*/
-			Downsampling(cloud_stored);
-			/*depth*/
-			for(size_t i=0;i<cloud_stored->points.size();++i){
-				cloud_stored->points[i].data_n[3] = 
-					(cloud_stored->points[i].x*cloud_stored->points[i].normal_x
-					+ cloud_stored->points[i].y*cloud_stored->points[i].normal_y 
-					+ cloud_stored->points[i].z*cloud_stored->points[i].normal_z)
-					/(cloud_stored->points[i].normal_x*cloud_stored->points[i].normal_x 
-					+ cloud_stored->points[i].normal_y*cloud_stored->points[i].normal_y
-					+ cloud_stored->points[i].normal_z*cloud_stored->points[i].normal_z);
-			}
 		}
+		/*limit storing*/
+		if(mode_limit_store)	PassThroughFiltter(cloud_stored, std::vector<double>{-pc_range, pc_range, -pc_range, pc_range});
+		/*downsampling*/
+		Downsampling(cloud_stored);
+		/*depth*/
+		for(size_t i=0;i<cloud_stored->points.size();++i){
+			cloud_stored->points[i].data_n[3] = 
+				(cloud_stored->points[i].x*cloud_stored->points[i].normal_x
+				+ cloud_stored->points[i].y*cloud_stored->points[i].normal_y 
+				+ cloud_stored->points[i].z*cloud_stored->points[i].normal_z)
+				/(cloud_stored->points[i].normal_x*cloud_stored->points[i].normal_x 
+				+ cloud_stored->points[i].normal_y*cloud_stored->points[i].normal_y
+				+ cloud_stored->points[i].normal_z*cloud_stored->points[i].normal_z);
+		}
+		/*sync*/
+		pc_was_added = true;
+		odom_last = odom_now;
+		if(mode_open_viewer)	Visualization();
+		if(!cloud_stored->points.empty())	Publication();
 	}
-	if(mode_open_viewer)	Visualization();
-	if(!cloud_stored->points.empty())	Publication();
 	first_callback_odom = false;
 }
 

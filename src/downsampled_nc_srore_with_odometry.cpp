@@ -7,8 +7,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
-/* #include <pcl/filters/voxel_grid.h> */
-#include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/filters/passthrough.h>
 
 class DownsampledNCSroreWithOdometry{
@@ -137,15 +136,12 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 
 void DownsampledNCSroreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc)
 {
-	pcl::ApproximateVoxelGrid<pcl::PointNormal> avg;
-	avg.setInputCloud(pc);
-	avg.setLeafSize((float)leaf_size, (float)leaf_size, (float)leaf_size);
-	avg.filter(*pc);
-
-	/* pcl::VoxelGrid<pcl::PointNormal> vg; */
-	/* vg.setInputCloud(pc); */
-	/* vg.setLeafSize(0.5f, 0.5f, 0.5f); */
-	/* vg.filter(*pc); */
+	pcl::PointCloud<pcl::PointNormal>::Ptr tmp (new pcl::PointCloud<pcl::PointNormal>);
+	pcl::VoxelGrid<pcl::PointNormal> vg;
+	vg.setInputCloud(pc);
+	vg.setLeafSize((float)leaf_size, (float)leaf_size, (float)leaf_size);
+	vg.filter(*tmp);
+	*pc = *tmp;
 }
 
 void DownsampledNCSroreWithOdometry::PassThroughFilter(pcl::PointCloud<pcl::PointNormal>::Ptr pc, std::vector<double> range)

@@ -7,8 +7,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
-/* #include <pcl/filters/voxel_grid.h> */
-#include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/voxel_grid.h>
 
 class PCStoreWithOdometry{
 	private:
@@ -97,15 +96,12 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 
 void PCStoreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointXYZI>::Ptr pc)
 {
-	pcl::ApproximateVoxelGrid<pcl::PointXYZI> avg;
-	avg.setInputCloud(pc);
-	avg.setLeafSize(0.3f, 0.3f, 0.3f);
-	avg.filter(*pc);
-
-	/* pcl::VoxelGrid<pcl::PointXYZI> vg; */
-	/* vg.setInputCloud(pc); */
-	/* vg.setLeafSize(0.5f, 0.5f, 0.5f); */
-	/* vg.filter(*pc); */
+	pcl::PointCloud<pcl::PointXYZI>::Ptr tmp (new pcl::PointCloud<pcl::PointXYZI>);
+	pcl::VoxelGrid<pcl::PointXYZI> vg;
+	vg.setInputCloud(pc);
+	vg.setLeafSize(0.3f, 0.3f, 0.3f);
+	vg.filter(*tmp);
+	*pc = *tmp;
 }
 
 void PCStoreWithOdometry::Visualization(void)

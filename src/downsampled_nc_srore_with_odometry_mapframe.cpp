@@ -7,7 +7,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
-#include <pcl/filters/approximate_voxel_grid.h>
+#include <pcl/filters/voxel_grid.h>
 
 class PCStoreWithOdometry{
 	private:
@@ -68,8 +68,8 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 	frame_id_pub = msg->header.frame_id;
 	time_pub = msg->header.stamp;
 	if(!pc_was_added){
-		/*downsampling*/
-		Downsampling(cloud_now);
+		/* #<{(|downsampling|)}># */
+		/* Downsampling(cloud_now); */
 		/*transform*/
 		Eigen::Vector3f offset(
 			msg->pose.pose.position.x,
@@ -87,6 +87,9 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 		*cloud_stored  += *cloud_now;
 		pc_was_added = true;
 
+		/*downsampling*/
+		Downsampling(cloud_stored);
+
 		Visualization();
 		Publication();
 	}
@@ -94,10 +97,12 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 
 void PCStoreWithOdometry::Downsampling(pcl::PointCloud<pcl::PointNormal>::Ptr pc)
 {
-	pcl::ApproximateVoxelGrid<pcl::PointNormal> avg;
-	avg.setInputCloud(pc);
-	avg.setLeafSize((float)leaf_size, (float)leaf_size, (float)leaf_size);
-	avg.filter(*pc);
+	pcl::PointCloud<pcl::PointNormal>::Ptr tmp (new pcl::PointCloud<pcl::PointNormal>);
+	pcl::VoxelGrid<pcl::PointNormal> vg;
+	vg.setInputCloud(pc);
+	vg.setLeafSize((float)leaf_size, (float)leaf_size, (float)leaf_size);
+	vg.filter(*tmp);
+	*pc = *tmp;
 }
 
 void PCStoreWithOdometry::Visualization(void)

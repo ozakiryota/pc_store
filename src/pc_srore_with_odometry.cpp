@@ -19,7 +19,7 @@ class PCStoreWithOdometry{
 		/*publish*/
 		ros::Publisher pub;
 		/*viewer*/
-		pcl::visualization::PCLVisualizer viewer{"pc_store_with_odometry"};
+		// pcl::visualization::PCLVisualizer viewer{"pc_store_with_odometry"};
 		/*cloud*/
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_stored {new pcl::PointCloud<pcl::PointXYZI>};
 		pcl::PointCloud<pcl::PointXYZI>::Ptr cloud_now {new pcl::PointCloud<pcl::PointXYZI>};
@@ -38,18 +38,18 @@ class PCStoreWithOdometry{
 		PCStoreWithOdometry();
 		void CallbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
 		void CallbackOdom(const nav_msgs::OdometryConstPtr& msg);
-		void Visualization(void);
+		// void Visualization(void);
 		void Publication(void);
 };
 
 PCStoreWithOdometry::PCStoreWithOdometry()
 	: nhPrivate("~")
 {
-	sub_pc = nh.subscribe("/velodyne_points", 1, &PCStoreWithOdometry::CallbackPC, this);
+	sub_pc = nh.subscribe("/cloud", 1, &PCStoreWithOdometry::CallbackPC, this);
 	sub_odom = nh.subscribe("/odom", 1, &PCStoreWithOdometry::CallbackOdom, this);
-	pub = nh.advertise<sensor_msgs::PointCloud2>("/velodyne_points/stored", 1);
-	viewer.setBackgroundColor(1, 1, 1);
-	viewer.addCoordinateSystem(0.5, "axis");
+	pub = nh.advertise<sensor_msgs::PointCloud2>("/cloud/stored", 1);
+	// viewer.setBackgroundColor(1, 1, 1);
+	// viewer.addCoordinateSystem(0.5, "axis");
 
 	nhPrivate.param("mode_limit_store", mode_limit_store, true);
 	nhPrivate.param("limited_num_scans", limited_num_scans, 20);
@@ -104,12 +104,13 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 			std::cout << "limit storing: true" << std::endl;
 			std::cout << "number of stored scans: " << list_num_scanpoints.size() << std::endl;
 		}
-		Visualization();
+		// Visualization();
 		Publication();
 	}
 	first_callback_odom = false;
 }
 
+/*
 void PCStoreWithOdometry::Visualization(void)
 {
 	viewer.removeAllPointClouds();
@@ -121,6 +122,7 @@ void PCStoreWithOdometry::Visualization(void)
 	
 	viewer.spinOnce();
 }
+*/
 
 void PCStoreWithOdometry::Publication(void)
 {

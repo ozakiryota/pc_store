@@ -107,7 +107,8 @@ void DownsampledNCSroreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstP
 			tf::Matrix3x3(relative_rotation).getRPY(r, p, y);
 			if(offset.norm()>epsilon || r>epsilon || p>epsilon || y>epsilon){
 				/*transform*/
-				pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+				// pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+				pcl::transformPointCloudWithNormals(*cloud_stored, *cloud_stored, offset, rotation);
 				*cloud_stored  += *cloud_now;
 			}
 		}

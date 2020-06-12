@@ -82,7 +82,8 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 			msg->pose.pose.orientation.y,
 			msg->pose.pose.orientation.z
 		);
-		pcl::transformPointCloud(*cloud_now, *cloud_now, offset, rotation);
+		// pcl::transformPointCloud(*cloud_now, *cloud_now, offset, rotation);
+		pcl::transformPointCloudWithNormals(*cloud_now, *cloud_now, offset, rotation);
 
 		*cloud_stored  += *cloud_now;
 		pc_was_added = true;

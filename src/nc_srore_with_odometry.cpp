@@ -84,7 +84,8 @@ void PCStoreWithOdometry::CallbackOdom(const nav_msgs::OdometryConstPtr& msg)
 		);
 		tf::Quaternion q_local_move = pose_last.inverse()*q_global_move*pose_last;
 		Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
-		pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+		// pcl::transformPointCloud(*cloud_stored, *cloud_stored, offset, rotation);
+		pcl::transformPointCloudWithNormals(*cloud_stored, *cloud_stored, offset, rotation);
 		*cloud_stored  += *cloud_now;
 		pc_was_added = true;
 		

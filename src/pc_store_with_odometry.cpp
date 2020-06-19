@@ -133,6 +133,11 @@ void PCStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
 		storePC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[3]){
+		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_now (new pcl::PointCloud<pcl::InterestPoint>);
+		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_store (new pcl::PointCloud<pcl::InterestPoint>);
+		pcl::fromROSMsg(_pc_submsg, *pc_now);
+		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
+		storePC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[4]){
 		pcl::PointCloud<pcl::PointNormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointNormal>);
@@ -142,6 +147,11 @@ void PCStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
 		storeNC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[5]){
+		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZINormal>);
+		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZINormal>);
+		pcl::fromROSMsg(_pc_submsg, *pc_now);
+		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
+		storeNC(pc_now, pc_store, odom_now);
 	}
 	else{
 		std::cout << "This point-type is not supported: fields = " << fields << std::endl;

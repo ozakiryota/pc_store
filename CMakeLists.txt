@@ -193,11 +193,11 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-add_executable(pc_srore_with_odometry src/pc_srore_with_odometry.cpp)
-target_link_libraries(pc_srore_with_odometry ${catkin_LIBRARIES})
+add_executable(pc_store_with_odometry src/pc_store_with_odometry.cpp)
+target_link_libraries(pc_store_with_odometry ${catkin_LIBRARIES})
 #
-add_executable(nc_srore_with_odometry src/nc_srore_with_odometry.cpp)
-target_link_libraries(nc_srore_with_odometry ${catkin_LIBRARIES})
+add_executable(nc_store_with_odometry src/nc_store_with_odometry.cpp)
+target_link_libraries(nc_store_with_odometry ${catkin_LIBRARIES})
 #
 add_executable(downsampled_pc_srore_with_odometry src/downsampled_pc_srore_with_odometry.cpp)
 target_link_libraries(downsampled_pc_srore_with_odometry ${catkin_LIBRARIES})

@@ -7,8 +7,8 @@
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/visualization/cloud_viewer.h>
 
-// template<typename PointT>
 class PCStore{
 	private:
 		/*node handle*/
@@ -23,6 +23,8 @@ class PCStore{
 		// std::vector<sensor_msg::PointCloud2> _pc_record;
 		sensor_msgs::PointCloud2 _pc_submsg;
 		sensor_msgs::PointCloud2 _pc_pubmsg;
+		/*_viewer*/
+		pcl::visualization::PCLVisualizer _viewer{"pc_store_with_odometry"};
 		/*odom*/
 		nav_msgs::Odometry _odom_last;
 		/*list*/
@@ -48,6 +50,8 @@ class PCStore{
 		template<typename CloudPtr, typename PointT> void downsampling(CloudPtr pc, PointT no_use);
 		template<typename CloudPtr> void erasePoints(CloudPtr pc);
 		void publication(void);
+		template<typename CloudPtr, typename PointT> void visualizePC(CloudPtr pc, PointT no_use);
+		template<typename CloudPtr, typename PointT> void visualizeNC(CloudPtr nc, PointT no_use);
 };
 
 PCStore::PCStore()
@@ -67,10 +71,8 @@ PCStore::PCStore()
 	_pub_pc = _nh.advertise<sensor_msgs::PointCloud2>("/cloud/stored", 1);
 	/*initialize*/
 	listUpPointType();
-	/* if(_downsampling){ */
-	/* 	_scan_limit  = -1; */
-	/* 	std::cout << "_scan_limit is reset because of downsampling: " << _scan_limit << std::endl; */
-	/* } */
+	_viewer.setBackgroundColor(1, 1, 1);
+	_viewer.addCoordinateSystem(0.5, "axis");
 }
 
 void PCStore::listUpPointType(void)
@@ -193,6 +195,8 @@ void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	if(_downsampling)	downsampling(pc_store, pc_store->points[0]);
 	/*convert*/
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);
+	/*visualize*/
+	visualizePC(pc_store, pc_store->points[0]);
 }
 
 template<typename CloudPtr>
@@ -228,6 +232,8 @@ void PCStore::storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	if(_downsampling)	downsampling(pc_store, pc_store->points[0]);
 	/*convert*/
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);
+	/*visualize*/
+	visualizeNC(pc_store, pc_store->points[0]);
 }
 
 template<typename CloudPtr, typename PointT>
@@ -266,6 +272,30 @@ void PCStore::erasePoints(CloudPtr pc)
 void PCStore::publication(void)
 {
 	_pub_pc.publish(_pc_pubmsg);
+}
+
+template<typename CloudPtr, typename PointT>
+void PCStore::visualizePC(CloudPtr pc, PointT no_use)
+{
+	_viewer.removeAllPointClouds();
+
+	_viewer.addPointCloud<PointT>(pc, "pc");
+	_viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 0.0, 0.0, 0.0, "pc");
+	_viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "pc");
+	
+	_viewer.spinOnce();
+}
+
+template<typename CloudPtr, typename PointT>
+void PCStore::visualizeNC(CloudPtr nc, PointT no_use)
+{
+	_viewer.removeAllPointClouds();
+
+	_viewer.addPointCloudNormals<PointT>(nc, 1, 0.5, "nc");
+	_viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_COLOR, 0.0, 0.0, 0.0, "nc");
+	_viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_LINE_WIDTH, 1, "nc");
+	
+	_viewer.spinOnce();
 }
 
 int main(int argc, char** argv)

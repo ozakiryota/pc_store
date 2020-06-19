@@ -20,5 +20,6 @@
 		<remap from="/cloud" to="/velodyne_points"/>
 		<remap from="/cloud/stored" to="/velodyne_points/stored"/>
 		<param name="scan_limit" type="int" value="25"/>
+		<!-- <param name="limited_num_scans" type="int" value="25"/> -->
 	</node>
 </launch>

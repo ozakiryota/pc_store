@@ -209,7 +209,6 @@ void PCStore::erasePoints(CloudPtr pc)
 	pc->width = pc->points.size();
 	pc->height = 1;
 
-	std::cout << "limit storing: true" << std::endl;
 	std::cout << "number of stored scans: " << _list_num_scanpoints.size() << std::endl;
 }
 

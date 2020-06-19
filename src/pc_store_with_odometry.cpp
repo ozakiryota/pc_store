@@ -6,6 +6,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <tf/tf.h>
 #include <pcl/common/transforms.h>
+#include <pcl/filters/voxel_grid.h>
 
 // template<typename PointT>
 class PCStore{
@@ -33,6 +34,8 @@ class PCStore{
 		bool _got_first_odom = false;
 		/*parameter*/
 		int _scan_limit;
+		bool _downsampling;
+		double _leafsize;
 
 	public:
 		PCStore();
@@ -42,6 +45,7 @@ class PCStore{
 		void checkTypeAndStorePC(nav_msgs::Odometry odom_now);
 		template<typename CloudPtr> void storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now);
 		template<typename CloudPtr> void storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now);
+		template<typename CloudPtr, typename PointT> void downsampling(CloudPtr pc, PointT no_use);
 		template<typename CloudPtr> void erasePoints(CloudPtr pc);
 		void publication(void);
 };
@@ -52,6 +56,10 @@ PCStore::PCStore()
 	/*parameter*/
 	_nhPrivate.param("scan_limit", _scan_limit, -1);
 	std::cout << "_scan_limit = " << _scan_limit << std::endl;
+	_nhPrivate.param("downsampling", _downsampling, false);
+	std::cout << "_downsampling = " << _downsampling << std::endl;
+	_nhPrivate.param("leafsize", _leafsize, 0.3);
+	std::cout << "_leafsize = " << _leafsize << std::endl;
 	/*subscriber*/
 	_sub_pc = _nh.subscribe("/cloud", 1, &PCStore::callbackPC, this);
 	_sub_odom = _nh.subscribe("/odom", 1, &PCStore::callbackOdom, this);
@@ -59,6 +67,10 @@ PCStore::PCStore()
 	_pub_pc = _nh.advertise<sensor_msgs::PointCloud2>("/cloud/stored", 1);
 	/*initialize*/
 	listUpPointType();
+	/* if(_downsampling){ */
+	/* 	_scan_limit  = -1; */
+	/* 	std::cout << "_scan_limit is reset because of downsampling: " << _scan_limit << std::endl; */
+	/* } */
 }
 
 void PCStore::listUpPointType(void)
@@ -163,7 +175,12 @@ void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	pc_store->header.stamp = pc_now->header.stamp;
 	_list_num_scanpoints.push_back(pc_now->points.size());
 	/*erase*/
-	if(_scan_limit > 0)	erasePoints(pc_store);
+	if(_scan_limit > 0){
+		_list_num_scanpoints.push_back(pc_now->points.size());
+		erasePoints(pc_store);
+	}
+	/*downsampling*/
+	if(_downsampling)	downsampling(pc_store, pc_store->points[0]);
 	/*convert*/
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);
 }
@@ -192,24 +209,48 @@ void PCStore::storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	/*store*/
 	*pc_store  += *pc_now;
 	pc_store->header.stamp = pc_now->header.stamp;
-	_list_num_scanpoints.push_back(pc_now->points.size());
 	/*erase*/
-	if(_scan_limit > 0)	erasePoints(pc_store);
+	if(_scan_limit > 0){
+		_list_num_scanpoints.push_back(pc_now->points.size());
+		erasePoints(pc_store);
+	}
+	/*downsampling*/
+	if(_downsampling)	downsampling(pc_store, pc_store->points[0]);
 	/*convert*/
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);
+}
+
+template<typename CloudPtr, typename PointT>
+void PCStore::downsampling(CloudPtr pc, PointT no_use)
+{
+	typedef pcl::PointCloud<PointT> Cloud;
+	CloudPtr tmp(new Cloud);
+	pcl::VoxelGrid<PointT> vg;
+	vg.setInputCloud(pc);
+	vg.setLeafSize(_leafsize, _leafsize, _leafsize);
+	vg.filter(*tmp);
+	*pc = *tmp;
 }
 
 template<typename CloudPtr>
 void PCStore::erasePoints(CloudPtr pc)
 {
-	if(_list_num_scanpoints.size() > (size_t)_scan_limit){
-		pc->points.erase(pc->points.begin(), pc->points.begin() + _list_num_scanpoints[0]);
+	if(_downsampling){
+		int limit_numpoints = _list_num_scanpoints[0]*_scan_limit;
+		int erase_numpoints = pc->points.size() - limit_numpoints;
+		if(erase_numpoints > 0)	pc->points.erase(pc->points.begin(), pc->points.begin() + erase_numpoints);
 		_list_num_scanpoints.erase(_list_num_scanpoints.begin());
+		std::cout << "number of stored points: " << pc->points.size() << " / " << limit_numpoints << std::endl;
+	}
+	else{
+		if(_list_num_scanpoints.size() > (size_t)_scan_limit){
+			pc->points.erase(pc->points.begin(), pc->points.begin() + _list_num_scanpoints[0]);
+			_list_num_scanpoints.erase(_list_num_scanpoints.begin());
+		}
+		std::cout << "number of stored scans: " << _list_num_scanpoints.size() << " / " << _scan_limit << std::endl;
 	}
 	pc->width = pc->points.size();
 	pc->height = 1;
-
-	std::cout << "number of stored scans: " << _list_num_scanpoints.size() << std::endl;
 }
 
 void PCStore::publication(void)

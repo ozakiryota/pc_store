@@ -57,6 +57,7 @@ class PCStore{
 PCStore::PCStore()
 	: _nhPrivate("~")
 {
+	std::cout << "--- pc_store_with_odometry ---" << std::endl;
 	/*parameter*/
 	_nhPrivate.param("scan_limit", _scan_limit, -1);
 	std::cout << "_scan_limit = " << _scan_limit << std::endl;
@@ -185,7 +186,6 @@ void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	/*store*/
 	*pc_store  += *pc_now;
 	pc_store->header.stamp = pc_now->header.stamp;
-	_list_num_scanpoints.push_back(pc_now->points.size());
 	/*erase*/
 	if(_scan_limit > 0){
 		_list_num_scanpoints.push_back(pc_now->points.size());

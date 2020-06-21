@@ -196,6 +196,9 @@ include_directories(
 add_executable(pc_store_with_odometry src/pc_store_with_odometry.cpp)
 target_link_libraries(pc_store_with_odometry ${catkin_LIBRARIES})
 #
+add_executable(pc_leave_with_odometry src/pc_leave_with_odometry.cpp)
+target_link_libraries(pc_leave_with_odometry ${catkin_LIBRARIES})
+#
 add_executable(nc_store_with_odometry src/nc_store_with_odometry.cpp)
 target_link_libraries(nc_store_with_odometry ${catkin_LIBRARIES})
 #

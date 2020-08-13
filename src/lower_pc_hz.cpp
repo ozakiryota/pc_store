@@ -83,7 +83,7 @@ bool LowerPCHz::isOverTargetHz(void)
 {
 	double duration = (_pc_submsg.header.stamp - _pc_pubmsg.header.stamp).toSec();
 	double hz = 1.0/duration;
-	if(hz > _target_hz)	return true;
+	if(hz < _target_hz)	return true;
 	else	return false;
 }
 
@@ -113,6 +113,7 @@ void LowerPCHz::aggregatePC(CloudPtr pc_now, CloudPtr pc_store)
 	pcl::fromROSMsg(_pc_submsg, *pc_now);
 	pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 
+	pc_now->header.stamp = pc_store->header.stamp;
 	*pc_store += *pc_now;
 
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);	
@@ -125,7 +126,7 @@ void LowerPCHz::publication(void)
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "lower_pc_hz");
+	ros::init(argc, argv, "lower_pc_hz");
 	
 	LowerPCHz lower_pc_hz;
 

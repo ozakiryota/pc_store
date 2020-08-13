@@ -124,36 +124,26 @@ void PCStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
 	if(fields == _list_fields[0]){
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZ>);
 		pcl::PointCloud<pcl::PointXYZ>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::fromROSMsg(_pc_submsg, *pc_now);
-		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 		storePC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[1] || fields == _list_fields[2]){
 		pcl::PointCloud<pcl::PointXYZI>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZI>);
 		pcl::PointCloud<pcl::PointXYZI>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZI>);
-		pcl::fromROSMsg(_pc_submsg, *pc_now);
-		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 		storePC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[3]){
 		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_now (new pcl::PointCloud<pcl::InterestPoint>);
 		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_store (new pcl::PointCloud<pcl::InterestPoint>);
-		pcl::fromROSMsg(_pc_submsg, *pc_now);
-		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 		storePC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[4]){
 		pcl::PointCloud<pcl::PointNormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointNormal>);
 		pcl::PointCloud<pcl::PointNormal>::Ptr pc_store (new pcl::PointCloud<pcl::PointNormal>);
-		pcl::fromROSMsg(_pc_submsg, *pc_now);
-		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 		storeNC(pc_now, pc_store, odom_now);
 	}
 	else if(fields == _list_fields[5]){
 		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZINormal>);
 		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZINormal>);
-		pcl::fromROSMsg(_pc_submsg, *pc_now);
-		pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 		storeNC(pc_now, pc_store, odom_now);
 	}
 	else{
@@ -165,6 +155,9 @@ void PCStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
 template<typename CloudPtr>
 void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now)
 {
+	/*ROS -> PCL*/
+	pcl::fromROSMsg(_pc_submsg, *pc_now);
+	pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 	/*prepare*/
 	tf::Quaternion q_ori_now;
 	tf::Quaternion q_ori_last;
@@ -193,7 +186,7 @@ void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 	}
 	/*downsampling*/
 	if(_downsampling)	downsampling(pc_store, pc_store->points[0]);
-	/*convert*/
+	/*PCL -> ROS*/
 	pcl::toROSMsg(*pc_store, _pc_pubmsg);
 	/*visualize*/
 	visualizePC(pc_store, pc_store->points[0]);
@@ -202,6 +195,9 @@ void PCStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odo
 template<typename CloudPtr>
 void PCStore::storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now)
 {
+	/*ROS -> PCL*/
+	pcl::fromROSMsg(_pc_submsg, *pc_now);
+	pcl::fromROSMsg(_pc_pubmsg, *pc_store);
 	/*prepare*/
 	tf::Quaternion q_ori_now;
 	tf::Quaternion q_ori_last;

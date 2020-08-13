@@ -199,17 +199,20 @@ target_link_libraries(pc_store_with_odometry ${catkin_LIBRARIES})
 add_executable(pc_leave_with_odometry src/pc_leave_with_odometry.cpp)
 target_link_libraries(pc_leave_with_odometry ${catkin_LIBRARIES})
 #
-add_executable(nc_store_with_odometry src/nc_store_with_odometry.cpp)
-target_link_libraries(nc_store_with_odometry ${catkin_LIBRARIES})
+# add_executable(nc_store_with_odometry src/nc_store_with_odometry.cpp)
+# target_link_libraries(nc_store_with_odometry ${catkin_LIBRARIES})
 #
-add_executable(downsampled_pc_srore_with_odometry src/downsampled_pc_srore_with_odometry.cpp)
-target_link_libraries(downsampled_pc_srore_with_odometry ${catkin_LIBRARIES})
+# add_executable(downsampled_pc_srore_with_odometry src/downsampled_pc_srore_with_odometry.cpp)
+# target_link_libraries(downsampled_pc_srore_with_odometry ${catkin_LIBRARIES})
 #
-add_executable(downsampled_nc_srore_with_odometry src/downsampled_nc_srore_with_odometry.cpp)
-target_link_libraries(downsampled_nc_srore_with_odometry ${catkin_LIBRARIES})
+# add_executable(downsampled_nc_srore_with_odometry src/downsampled_nc_srore_with_odometry.cpp)
+# target_link_libraries(downsampled_nc_srore_with_odometry ${catkin_LIBRARIES})
 #
-add_executable(downsampled_pc_srore_with_odometry_mapframe src/downsampled_pc_srore_with_odometry_mapframe.cpp)
-target_link_libraries(downsampled_pc_srore_with_odometry_mapframe ${catkin_LIBRARIES})
+# add_executable(downsampled_pc_srore_with_odometry_mapframe src/downsampled_pc_srore_with_odometry_mapframe.cpp)
+# target_link_libraries(downsampled_pc_srore_with_odometry_mapframe ${catkin_LIBRARIES})
 #
-add_executable(downsampled_nc_srore_with_odometry_mapframe src/downsampled_nc_srore_with_odometry_mapframe.cpp)
-target_link_libraries(downsampled_nc_srore_with_odometry_mapframe ${catkin_LIBRARIES})
+# add_executable(downsampled_nc_srore_with_odometry_mapframe src/downsampled_nc_srore_with_odometry_mapframe.cpp)
+# target_link_libraries(downsampled_nc_srore_with_odometry_mapframe ${catkin_LIBRARIES})
+#
+add_executable(lower_pc_hz src/lower_pc_hz.cpp)
+target_link_libraries(lower_pc_hz ${catkin_LIBRARIES})

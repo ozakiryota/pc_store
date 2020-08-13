@@ -22,6 +22,7 @@ class LowerPCHz{
 		bool _got_first_pc = false;
 		/*parameters*/
 		double _target_hz;
+		double epsilon = 1.0e-0;
 
 	public:
 		LowerPCHz();
@@ -83,7 +84,8 @@ bool LowerPCHz::isOverTargetHz(void)
 {
 	double duration = (_pc_submsg.header.stamp - _pc_pubmsg.header.stamp).toSec();
 	double hz = 1.0/duration;
-	if(hz < _target_hz)	return true;
+	// if(hz < _target_hz)	return true;
+	if((hz-_target_hz) < epsilon)	return true;
 	else	return false;
 }
 

@@ -3,24 +3,19 @@
 	<param name="use_sim_time" value="true"/>
 
 	<!-- rosbag -->
-	<node pkg="rosbag" type="play" name="player" args="--clock /home/amsl/ozaki/bagfiles/infant/indoor_dkan/2019-04-04-14-27-47.bag"/>
+	<node pkg="rosbag" type="play" name="player" args="--clock $(env HOME)/rosbag/sq2_velodyne/dkan_outdoor/2018-10-31-08-37-11.bag"/>
 	
 	<!-- rviz -->
-	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find pc_store)rviz_config/pc_store.rviz"/>
+	<node pkg="rviz" type="rviz" name="rviz" args="-d $(find pc_store)/rviz_config/velodyne.rviz"/>
 
 	<!-- sensor driver -->
 	<include file="$(find velodyne_pointcloud)/launch/32e_points.launch"/>
 
-	<!-- infant -->
-	<node pkg="pose_estimation_walls" name="odom_republish_infant" type="odom_republish_infant"/>
-
 	<!-- main -->
 	<node pkg="pc_store" name="pc_store_with_odometry" type="pc_store_with_odometry" output="screen">
-		<remap from="/odom" to="/tinypower/odom/republished"/>
-		<remap from="/cloud" to="/velodyne_points"/>
-		<remap from="/cloud/stored" to="/velodyne_points/stored"/>
-		<param name="scan_limit" type="int" value="25"/>
-		<!-- <param name="downsampling" type="bool" value="true"/> -->
-		<!-- <param name="leafsize" type="double" value="0.3"/> -->
+		<remap from="/point_cloud" to="/velodyne_points"/>
+		<remap from="/point_cloud/stored" to="/velodyne_points/stored"/>
+		<param name="max_buffering_scan" type="int" value="25"/>
+		<param name="downsampling_leafsize" type="double" value="0.3"/>
 	</node>
 </launch>

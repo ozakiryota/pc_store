@@ -8,7 +8,7 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
-#include <pcl/visualization/cloud_viewer.h>
+#include <pcl/filters/passthrough.h>
 
 class PcStore{
 	private:
@@ -16,15 +16,15 @@ class PcStore{
 		ros::NodeHandle nh_;
 		ros::NodeHandle nh_private_;
 		/*subscriber*/
-		ros::Subscriber sub_pc_;
-		ros::Subscriber sub_odom_;
+		ros::Subscriber pc_sub_;
+		ros::Subscriber odom_sub_;
 		/*publisher*/
-		ros::Publisher pub_pc_;
+		ros::Publisher pc_pub_;
 		/*pc*/
-		sensor_msgs::PointCloud2 pc_submsg_;
-		sensor_msgs::PointCloud2 pc_pubmsg_;
+		sensor_msgs::PointCloud2 sub_pc_msg_;
+		sensor_msgs::PointCloud2 pub_pc_msg_;
 		/*odom*/
-		nav_msgs::Odometry odom_last_;
+		nav_msgs::Odometry last_odom_;
 		/*list*/
 		std::vector<std::string> field_list_;
 		std::vector<size_t> num_scanpoints_list_;
@@ -35,18 +35,19 @@ class PcStore{
 		/*parameter*/
 		int max_num_buffering_scan_;
 		double downsampling_leafsize_;
+		double passthrough_range_;
 
 	public:
 		PcStore();
 		void listUpPointType(void);
 		void callbackPC(const sensor_msgs::PointCloud2ConstPtr& msg);
 		void callbackOdom(const nav_msgs::OdometryConstPtr& msg);
-		void checkTypeAndStorePC(nav_msgs::Odometry odom_now);
-		template<typename CloudPtr> void storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now);
-		template<typename CloudPtr> void storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now);
-		template<typename CloudPtr, typename PointT> void downsampling(CloudPtr pc, PointT no_use);
-		template<typename CloudPtr> void erasePoints(CloudPtr pc);
-		void publication(void);
+		void getOdomDiff(const nav_msgs::Odometry& curr_odom, Eigen::Quaternionf& rotation, Eigen::Vector3f& offset);
+		void checkTypeAndStorePC(const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset);
+		template<typename CloudPtr> void threadForPC(CloudPtr curr_pc, CloudPtr store_pc, const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset);
+		template<typename CloudPtr> void threadForNC(CloudPtr curr_pc, CloudPtr store_pc, const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset);
+		template<typename CloudPtr, typename PointT> void storePC(const CloudPtr curr_pc, const CloudPtr& store_pc, PointT no_use);
+		void publishMsg(void);
 };
 
 PcStore::PcStore()
@@ -58,11 +59,13 @@ PcStore::PcStore()
 	std::cout << "max_num_buffering_scan_ = " << max_num_buffering_scan_ << std::endl;
 	nh_private_.param("downsampling_leafsize", downsampling_leafsize_, -1.0);
 	std::cout << "downsampling_leafsize_ = " << downsampling_leafsize_ << std::endl;
+	nh_private_.param("passthrough_range", passthrough_range_, -1.0);
+	std::cout << "passthrough_range_ = " << passthrough_range_ << std::endl;
 	/*subscriber*/
-	sub_pc_ = nh_.subscribe("/point_cloud", 1, &PcStore::callbackPC, this);
-	sub_odom_ = nh_.subscribe("/odom", 1, &PcStore::callbackOdom, this);
+	pc_sub_ = nh_.subscribe("/point_cloud", 1, &PcStore::callbackPC, this);
+	odom_sub_ = nh_.subscribe("/odom", 1, &PcStore::callbackOdom, this);
 	/*publisher*/
-	pub_pc_ = nh_.advertise<sensor_msgs::PointCloud2>("/point_cloud/stored", 1);
+	pc_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/point_cloud/stored", 1);
 	/*initialize*/
 	listUpPointType();
 }
@@ -82,60 +85,86 @@ void PcStore::listUpPointType(void)
 void PcStore::callbackPC(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
 	if(!got_first_pc_){
-		pc_pubmsg_ = *msg;
+		pub_pc_msg_ = *msg;
 		got_first_pc_ = true;
 		return;
 	}
 
-	pc_submsg_ = *msg;
+	sub_pc_msg_ = *msg;
 	got_new_pc_ = true;
 }
 
 void PcStore::callbackOdom(const nav_msgs::OdometryConstPtr& msg)
 {
 	if(!got_first_odom_){
-		odom_last_ = *msg;
+		last_odom_ = *msg;
 		got_first_odom_ = true;
 		return;
 	}
 	if(!got_new_pc_)	return;
 
-	checkTypeAndStorePC(*msg);
-	publication();
+	Eigen::Quaternionf rotation;
+	Eigen::Vector3f offset;
+	getOdomDiff(*msg, rotation, offset);
+
+	checkTypeAndStorePC(rotation, offset);
+	publishMsg();
 	
 	/*reset*/
-	odom_last_ = *msg;
+	last_odom_ = *msg;
 	got_new_pc_ = false;
 }
 
-void PcStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
+void PcStore::getOdomDiff(const nav_msgs::Odometry& curr_odom, Eigen::Quaternionf& rotation, Eigen::Vector3f& offset)
 {
-	std::string fields = pcl::getFieldsList(pc_submsg_);
+	/*rotation*/
+	tf::Quaternion q_curr_ori;
+	tf::Quaternion q_last_ori;
+	quaternionMsgToTF(curr_odom.pose.pose.orientation, q_curr_ori);
+	quaternionMsgToTF(last_odom_.pose.pose.orientation, q_last_ori);
+	tf::Quaternion q_rel_rot = q_last_ori*q_curr_ori.inverse();
+	q_rel_rot.normalize();
+	rotation = Eigen::Quaternionf(q_rel_rot.w(), q_rel_rot.x(), q_rel_rot.y(), q_rel_rot.z());
+
+	/*offset*/
+	tf::Quaternion q_global_move(
+		last_odom_.pose.pose.position.x - curr_odom.pose.pose.position.x,
+		last_odom_.pose.pose.position.y - curr_odom.pose.pose.position.y,
+		last_odom_.pose.pose.position.z - curr_odom.pose.pose.position.z,
+		0.0
+	);
+	tf::Quaternion q_local_move = q_last_ori.inverse()*q_global_move*q_last_ori;
+	offset = Eigen::Vector3f(q_local_move.x(), q_local_move.y(), q_local_move.z());
+}
+
+void PcStore::checkTypeAndStorePC(const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset)
+{
+	std::string fields = pcl::getFieldsList(sub_pc_msg_);
 
 	if(fields == field_list_[0]){
-		pcl::PointCloud<pcl::PointXYZ>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::PointCloud<pcl::PointXYZ>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZ>);
-		storePC(pc_now, pc_store, odom_now);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr curr_pc (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr store_pc (new pcl::PointCloud<pcl::PointXYZ>);
+		threadForPC(curr_pc, store_pc, rotation, offset);
 	}
 	else if(fields == field_list_[1] || fields == field_list_[2]){
-		pcl::PointCloud<pcl::PointXYZI>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZI>);
-		pcl::PointCloud<pcl::PointXYZI>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZI>);
-		storePC(pc_now, pc_store, odom_now);
+		pcl::PointCloud<pcl::PointXYZI>::Ptr curr_pc (new pcl::PointCloud<pcl::PointXYZI>);
+		pcl::PointCloud<pcl::PointXYZI>::Ptr store_pc (new pcl::PointCloud<pcl::PointXYZI>);
+		threadForPC(curr_pc, store_pc, rotation, offset);
 	}
 	else if(fields == field_list_[3]){
-		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_now (new pcl::PointCloud<pcl::InterestPoint>);
-		pcl::PointCloud<pcl::InterestPoint>::Ptr pc_store (new pcl::PointCloud<pcl::InterestPoint>);
-		storePC(pc_now, pc_store, odom_now);
+		pcl::PointCloud<pcl::InterestPoint>::Ptr curr_pc (new pcl::PointCloud<pcl::InterestPoint>);
+		pcl::PointCloud<pcl::InterestPoint>::Ptr store_pc (new pcl::PointCloud<pcl::InterestPoint>);
+		threadForPC(curr_pc, store_pc, rotation, offset);
 	}
 	else if(fields == field_list_[4]){
-		pcl::PointCloud<pcl::PointNormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointNormal>);
-		pcl::PointCloud<pcl::PointNormal>::Ptr pc_store (new pcl::PointCloud<pcl::PointNormal>);
-		storeNC(pc_now, pc_store, odom_now);
+		pcl::PointCloud<pcl::PointNormal>::Ptr curr_pc (new pcl::PointCloud<pcl::PointNormal>);
+		pcl::PointCloud<pcl::PointNormal>::Ptr store_pc (new pcl::PointCloud<pcl::PointNormal>);
+		threadForNC(curr_pc, store_pc, rotation, offset);
 	}
 	else if(fields == field_list_[5]){
-		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_now (new pcl::PointCloud<pcl::PointXYZINormal>);
-		pcl::PointCloud<pcl::PointXYZINormal>::Ptr pc_store (new pcl::PointCloud<pcl::PointXYZINormal>);
-		storeNC(pc_now, pc_store, odom_now);
+		pcl::PointCloud<pcl::PointXYZINormal>::Ptr curr_pc (new pcl::PointCloud<pcl::PointXYZINormal>);
+		pcl::PointCloud<pcl::PointXYZINormal>::Ptr store_pc (new pcl::PointCloud<pcl::PointXYZINormal>);
+		threadForNC(curr_pc, store_pc, rotation, offset);
 	}
 	else{
 		std::cout << "This point-type is not supported: fields = " << fields << std::endl;
@@ -144,117 +173,78 @@ void PcStore::checkTypeAndStorePC(nav_msgs::Odometry odom_now)
 }
 
 template<typename CloudPtr>
-void PcStore::storePC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now)
+void PcStore::threadForPC(CloudPtr curr_pc, CloudPtr store_pc, const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset)
 {
 	/*ROS -> PCL*/
-	pcl::fromROSMsg(pc_submsg_, *pc_now);
-	pcl::fromROSMsg(pc_pubmsg_, *pc_store);
-	/*prepare*/
-	tf::Quaternion q_ori_now;
-	tf::Quaternion q_ori_last;
-	quaternionMsgToTF(odom_now.pose.pose.orientation, q_ori_now);
-	quaternionMsgToTF(odom_last_.pose.pose.orientation, q_ori_last);
-	tf::Quaternion q_rel_rot = q_ori_last*q_ori_now.inverse();
-	q_rel_rot.normalize();	
-	Eigen::Quaternionf rotation(q_rel_rot.w(), q_rel_rot.x(), q_rel_rot.y(), q_rel_rot.z());
-	tf::Quaternion q_global_move(
-		odom_last_.pose.pose.position.x - odom_now.pose.pose.position.x,
-		odom_last_.pose.pose.position.y - odom_now.pose.pose.position.y,
-		odom_last_.pose.pose.position.z - odom_now.pose.pose.position.z,
-		0.0
-	);
-	tf::Quaternion q_local_move = q_ori_last.inverse()*q_global_move*q_ori_last;
-	Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
+	pcl::fromROSMsg(sub_pc_msg_, *curr_pc);
+	pcl::fromROSMsg(pub_pc_msg_, *store_pc);
 	/*transform*/
-	pcl::transformPointCloud(*pc_store, *pc_store, offset, rotation);
+	pcl::transformPointCloud(*store_pc, *store_pc, offset, rotation);
 	/*store*/
-	*pc_store  += *pc_now;
-	pc_store->header.stamp = pc_now->header.stamp;
-	/*erase*/
-	if(max_num_buffering_scan_ > 0){
-		num_scanpoints_list_.push_back(pc_now->points.size());
-		erasePoints(pc_store);
-	}
-	/*downsampling*/
-	if(downsampling_leafsize_ > 0)	downsampling(pc_store, pc_store->points[0]);
-	/*PCL -> ROS*/
-	pcl::toROSMsg(*pc_store, pc_pubmsg_);
+	storePC(curr_pc, store_pc, store_pc->points[0]);
 }
 
 template<typename CloudPtr>
-void PcStore::storeNC(CloudPtr pc_now, CloudPtr pc_store, nav_msgs::Odometry odom_now)
+void PcStore::threadForNC(CloudPtr curr_pc, CloudPtr store_pc, const Eigen::Quaternionf& rotation, const Eigen::Vector3f& offset)
 {
 	/*ROS -> PCL*/
-	pcl::fromROSMsg(pc_submsg_, *pc_now);
-	pcl::fromROSMsg(pc_pubmsg_, *pc_store);
-	/*prepare*/
-	tf::Quaternion q_ori_now;
-	tf::Quaternion q_ori_last;
-	quaternionMsgToTF(odom_now.pose.pose.orientation, q_ori_now);
-	quaternionMsgToTF(odom_last_.pose.pose.orientation, q_ori_last);
-	tf::Quaternion q_rel_rot = q_ori_last*q_ori_now.inverse();
-	q_rel_rot.normalize();	
-	Eigen::Quaternionf rotation(q_rel_rot.w(), q_rel_rot.x(), q_rel_rot.y(), q_rel_rot.z());
-	tf::Quaternion q_global_move(
-		odom_last_.pose.pose.position.x - odom_now.pose.pose.position.x,
-		odom_last_.pose.pose.position.y - odom_now.pose.pose.position.y,
-		odom_last_.pose.pose.position.z - odom_now.pose.pose.position.z,
-		0.0
-	);
-	tf::Quaternion q_local_move = q_ori_last.inverse()*q_global_move*q_ori_last;
-	Eigen::Vector3f offset(q_local_move.x(), q_local_move.y(), q_local_move.z());
+	pcl::fromROSMsg(sub_pc_msg_, *curr_pc);
+	pcl::fromROSMsg(pub_pc_msg_, *store_pc);
 	/*transform*/
-	pcl::transformPointCloudWithNormals(*pc_store, *pc_store, offset, rotation);
+	pcl::transformPointCloudWithNormals(*store_pc, *store_pc, offset, rotation);
 	/*store*/
-	*pc_store  += *pc_now;
-	pc_store->header.stamp = pc_now->header.stamp;
-	/*erase*/
-	if(max_num_buffering_scan_ > 0){
-		num_scanpoints_list_.push_back(pc_now->points.size());
-		erasePoints(pc_store);
-	}
-	/*downsampling*/
-	if(downsampling_leafsize_ > 0)	downsampling(pc_store, pc_store->points[0]);
-	/*convert*/
-	pcl::toROSMsg(*pc_store, pc_pubmsg_);
+	storePC(curr_pc, store_pc, store_pc->points[0]);
 }
 
 template<typename CloudPtr, typename PointT>
-void PcStore::downsampling(CloudPtr pc, PointT no_use)
+void PcStore::storePC(const CloudPtr curr_pc, const CloudPtr& store_pc, PointT no_use)
 {
-	typedef pcl::PointCloud<PointT> Cloud;
-	CloudPtr tmp(new Cloud);
-	pcl::VoxelGrid<PointT> vg;
-	vg.setInputCloud(pc);
-	vg.setLeafSize(downsampling_leafsize_, downsampling_leafsize_, downsampling_leafsize_);
-	vg.filter(*tmp);
-	*pc = *tmp;
-}
-
-template<typename CloudPtr>
-void PcStore::erasePoints(CloudPtr pc)
-{
+	/*add*/
+	*store_pc  += *curr_pc;
+	store_pc->header.stamp = curr_pc->header.stamp;
+	/*downsampling*/
 	if(downsampling_leafsize_ > 0){
-		int limit_numpoints = num_scanpoints_list_[0]*max_num_buffering_scan_;
-		int erase_numpoints = pc->points.size() - limit_numpoints;
-		if(erase_numpoints > 0)	pc->points.erase(pc->points.begin(), pc->points.begin() + erase_numpoints);
-		num_scanpoints_list_.erase(num_scanpoints_list_.begin());
-		std::cout << "number of stored points: " << pc->points.size() << " / " << limit_numpoints << std::endl;
+		pcl::VoxelGrid<PointT> vg;
+		vg.setInputCloud(store_pc);
+		vg.setLeafSize(downsampling_leafsize_, downsampling_leafsize_, downsampling_leafsize_);
+		vg.filter(*store_pc);
 	}
-	else{
+	else if(max_num_buffering_scan_ > 0){
+		num_scanpoints_list_.push_back(curr_pc->points.size());
 		if(num_scanpoints_list_.size() > (size_t)max_num_buffering_scan_){
-			pc->points.erase(pc->points.begin(), pc->points.begin() + num_scanpoints_list_[0]);
+			store_pc->points.erase(store_pc->points.begin(), store_pc->points.begin() + num_scanpoints_list_[0]);
 			num_scanpoints_list_.erase(num_scanpoints_list_.begin());
+			store_pc->width = store_pc->points.size();
+			store_pc->height = 1;
 		}
 		std::cout << "number of stored scans: " << num_scanpoints_list_.size() << " / " << max_num_buffering_scan_ << std::endl;
 	}
-	pc->width = pc->points.size();
-	pc->height = 1;
+	/*filter*/
+	if(passthrough_range_ > 0){
+		pcl::PassThrough<PointT> pt;
+		/*x*/
+		pt.setInputCloud(store_pc);
+		pt.setFilterFieldName("x");
+		pt.setFilterLimits(-passthrough_range_, passthrough_range_);
+		pt.filter(*store_pc);
+		/*y*/
+		pt.setInputCloud(store_pc);
+		pt.setFilterFieldName("y");
+		pt.setFilterLimits(-passthrough_range_, passthrough_range_);
+		pt.filter(*store_pc);
+		/*z*/
+		pt.setInputCloud(store_pc);
+		pt.setFilterFieldName("z");
+		pt.setFilterLimits(-passthrough_range_, passthrough_range_);
+		pt.filter(*store_pc);
+	}
+	/*convert*/
+	pcl::toROSMsg(*store_pc, pub_pc_msg_);
 }
 
-void PcStore::publication(void)
+void PcStore::publishMsg(void)
 {
-	pub_pc_.publish(pc_pubmsg_);
+	pc_pub_.publish(pub_pc_msg_);
 }
 
 int main(int argc, char** argv)
